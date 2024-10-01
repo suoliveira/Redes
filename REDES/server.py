@@ -1,26 +1,36 @@
-# Importar o módulo socket
 from socket import *
-import sys  # Para encerrar o programa
+import sys  
 
-# Criar o socket do servidor
+HOST = ''
+PORT = 5000
 serverSocket = socket(AF_INET, SOCK_STREAM)
+origin = (HOST, PORT)
 
-# Preparar o socket do servidor
-serverPort = 6789  # Porta onde o servidor irá escutar
-serverSocket.bind(('', serverPort))  # Vincular o socket ao endereço IP e porta
-serverSocket.listen(1)  # Servidor ouvindo conexões TCP, até 1 conexão simultânea
-print(f'Servidor está rodando na porta {serverPort}...')
+serverSocket.bind(origin)  # Vincular o socket ao endereço IP e porta
+serverSocket.listen(1)  
+print(f'Servidor está rodando na porta {PORT}...')
 
 while True:
-    # Estabelecer a conexão
-    print('Pronto para servir...')
-    connectionSocket, addr = serverSocket.accept()  # Aceita a conexão
-
+    connectionSocket, client = serverSocket.accept()  # Aceita a conexão
+    
     try:
-        # Receber a mensagem do cliente
-        message = connectionSocket.recv(1024).decode()  # Recebe a mensagem do cliente
-        filename = message.split()[1]  # O nome do arquivo solicitado
-        f = open(filename[1:])  # Abrir o arquivo solicitado no sistema de arquivos do servidor
+        message = connectionSocket.recv(1024).decode("utf-8")  # Recebe a mensagem do cliente
+
+        if not message:
+            print("Nenhuma mensagem recebida.")
+            connectionSocket.close()
+            continue
+        
+        lines = message.splitlines()
+        filename = lines[0]  
+        print(f"Arquivo solicitado: {filename}")
+        
+        # Extrair o nome do arquivo corretamente
+        filename = filename.split()[1] 
+        if filename == '/':
+            filename = 'HelloWorld.html'
+        filename = filename.lstrip("/")  
+        f = open(filename)  # Abrir o arquivo solicitado no sistema de arquivos do servidor
         outputdata = f.read()  # Ler o conteúdo do arquivo
 
         # Enviar uma linha de cabeçalho HTTP para o socket
@@ -35,7 +45,6 @@ while True:
         connectionSocket.close()
 
     except IOError:
-        # Se o arquivo não for encontrado, retornar um erro 404
         connectionSocket.send("HTTP/1.1 404 Not Found\r\n".encode())
         connectionSocket.send("Content-Type: text/html\r\n\r\n".encode())
         connectionSocket.send("<html><body><h1>404 Not Found</h1></body></html>\r\n".encode())
